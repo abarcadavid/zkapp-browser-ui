@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import ZkappWorkerClient from './zkAppWorkerClient';
 import { PublicKey, Field } from 'snarkyjs';
 
+let transactionFee = 0.1;
+
 export default function App() {
   let [state, setState] = useState({
     zkappWorkerClient: null as null | ZkappWorkerClient,
@@ -100,6 +102,42 @@ export default function App() {
       }
     })();
   }, [state.hasBeenSetup]);
+
+  // -------------------------------------------------------
+  // Send a transaction
+
+  const onSendTransaction = async () => {
+    setState({ ...state, creatingTransaction: true });
+    console.log('sending a transaction...');
+
+    await state.zkappWorkerClient!.fetchAccount({
+      publicKey: state.publicKey!,
+    });
+
+    await state.zkappWorkerClient!.createUpdateTransaction();
+
+    console.log('creating proof...');
+    await state.zkappWorkerClient!.proveUpdateTransaction();
+
+    console.log('getting Transaction JSON...');
+    const transactionJSON = await state.zkappWorkerClient!.getTransactionJSON();
+
+    console.log('requesting send transaction...');
+    const { hash } = await (window as any).mina.sendTransaction({
+      transaction: transactionJSON,
+      feePayer: {
+        fee: transactionFee,
+        memo: '',
+      },
+    });
+
+    console.log(
+      'See transaction at https://berkeley.minaexplorer.com/transaction/' + hash
+    );
+
+    setState({ ...state, creatingTransaction: false });
+  };
+
 
   return <div />
 }
