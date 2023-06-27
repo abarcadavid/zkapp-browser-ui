@@ -79,5 +79,27 @@ export default function App() {
     })();
   }, []);
 
+  // -------------------------------------------------------
+  // Wait for account to exist, if it didn't
+
+  useEffect(() => {
+    (async () => {
+      if (state.hasBeenSetup && !state.accountExists) {
+        for (;;) {
+          console.log('checking if account exists...');
+          const res = await state.zkappWorkerClient!.fetchAccount({
+            publicKey: state.publicKey!,
+          });
+          const accountExists = res.error == null;
+          if (accountExists) {
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+        }
+        setState({ ...state, accountExists: true });
+      }
+    })();
+  }, [state.hasBeenSetup]);
+
   return <div />
 }
